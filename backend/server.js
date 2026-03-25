@@ -8,6 +8,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/trips", require("./routes/trip"));
+app.use("/api/ocr", require("./routes/ocr"));
+
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
