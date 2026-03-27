@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const Tesseract = require("tesseract.js");
 const sharp = require("sharp");
+const axios = require("axios");
 
 // ===============================
 // Multer Setup
@@ -153,17 +154,41 @@ router.post("/scan", upload.single("ticket"), async (req, res) => {
     // ===============================
     // RESPONSE
     // ===============================
-    res.json({
-      msg: "Processed ticket (Final Stable)",
-      ticketNumber,
-      date,
-      startLocation,
-      endLocation,
-      confidenceScore,
-      needsManualReview,
-      cleanedText,
-      rawText,
-    });
+    // ===============================
+    // CALL TRIP API AUTOMATICALLY
+    // ===============================
+    try {
+      const tripResponse = await axios.post(
+        "http://localhost:4000/api/trips/add",
+        {
+          userId: req.body.userId, // must send from frontend
+          ticketNumber: ticketNumber,
+          ticketDateTime: new Date(), // safer than OCR date
+          startLocation: startLocation,
+          endLocation: endLocation,
+          latitude: req.body.latitude,
+          longitude: req.body.longitude,
+        },
+      );
+
+      res.json({
+        msg: "OCR + Trip completed",
+        ocrData: {
+          ticketNumber,
+          ticketDateTime: date,
+        },
+        trip: tripResponse.data,
+      });
+    } catch (apiError) {
+      res.json({
+        msg: "OCR done but trip failed",
+        ocrData: {
+          ticketNumber,
+          ticketDateTime: date,
+        },
+        error: apiError.response?.data || apiError.message,
+      });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
